@@ -52,8 +52,9 @@ class MyPromise{
     
   }
   then(successCallback, failCallBack){
-
-    
+    // 将then 方法的参数成可选参数
+    successCallback = successCallback ? successCallback :value => value
+    failCallBack = failCallBack ? failCallBack : reason => {throw reason}
     let promise2 =  new MyPromise((resolve, reject)=>{
 
         switch (this.status) {
@@ -114,7 +115,51 @@ class MyPromise{
     })
     return promise2
   }
+
+  static all(arr){
+    let result = []
+    return new MyPromise((resolve, reject)=>{
+      function setData(key, value){
+        // 设置
+        result[key] = value
+        if (result.length === arr.length){
+          // arr 中的所有元素都有返回值时，执行 成功回调
+          resolve(result)
+        }
+      }
+      for(let i=0; i<array.length; i++){
+        let now = array[i];
+        if(now instanceof MyPromise){
+          // 获取当前promise 对象的返回值
+          now.then(value => setData(i, value), reject)
+        }else{
+          setData(i, array[i])
+        }
+      }
+    })
+  }
+
+  static finally(callback){
+    // 捕获成功、失败回调 ，并执行callback 且返回promise
+    return this.then(value => {
+      return MyPromise.resolve(callback()).then(() => value);
+    }, reason => {
+      return MyPromise.resolve(callback()).then(() => { throw reason })
+    })
+  }
+  catch(failCallback) {
+    // 捕获错误回调
+    return this.then(undefined, failCallback)
+  }
+  static  resolve(value){
+    if (value instanceof MyPromise) return value;
+    return new  MyPromise((resolve, reject)=>{
+      resolve(value)
+    })
+  }
 }
+
+
 
 function resolvePromise(promise2,x, resolve, reject){
   if(promise2 ===x ){
