@@ -22,7 +22,12 @@ class MyPromise{
   failCallBacks = []  //失败回调数组
 
   constructor(actuator){
-    actuator(this.resolve, this.reject)
+    try {
+      //捕获错误状态
+      actuator(this.resolve, this.reject)
+    } catch (error) {
+      this.reject(error)
+    }
   }
   resolve = (v) => {  // 为了传递this 用箭头函数
     if (this.status === REJECTED) return // 状态已为 REJECTED 时 退出
@@ -54,36 +59,53 @@ class MyPromise{
         switch (this.status) {
           case FULFILLED:
             // 成功回调
-                setTimeout(() => {                  
-                  let x = successCallback(this.value)
-                  resolvePromise(promise2, x, resolve, reject)
+                setTimeout(() => {             
+                  try {                    
+                    // 捕获错误信息
+                    let x = successCallback(this.value)
+                    resolvePromise(promise2, x, resolve, reject)
+                  } catch (error) {
+                    reject(error)
+                  }     
                 }, 0);
                 
             break;
           
           case REJECTED:
             // 失败回调
-                setTimeout(() => {                  
-                  let r = failCallBack(this.reason)
-                  resolvePromise(promise2, r, resolve, reject)
+                setTimeout(() => {          
+                  try {                    
+                    let r = failCallBack(this.reason)
+                    resolvePromise(promise2, r, resolve, reject)
+                  } catch (error) {
+                    reject(error)
+                  }        
                 }, 0);
 
             break;
 
           default:
             // 异步时,保存回调fn
-
+            //将成功回调添加到 成功回调中等待调用
             this.successCallbacks.push((value)=>{
               setTimeout(() => {                
-                let x = successCallback(value)
-                resolvePromise(promise2,x, resolve, reject)
+                try {
+                  let x = successCallback(value)
+                  resolvePromise(promise2,x, resolve, reject)                  
+                } catch (error) {
+                  reject(error)
+                }
               }, 0);
             })
-
+            //将失败回调添加到 失败回调中等待调用
             this.failCallBacks.push((value)=>{
-              setTimeout(() => {                
-                let x = failCallBack(value)
-                resolvePromise(promise2,x, resolve, reject)
+              setTimeout(() => {            
+                try {                  
+                  let x = failCallBack(value)
+                  resolvePromise(promise2,x, resolve, reject)
+                } catch (error) {
+                  reject(error)
+                }    
               }, 0);
             })
              
@@ -96,11 +118,13 @@ class MyPromise{
 
 function resolvePromise(promise2,x, resolve, reject){
   if(promise2 ===x ){
+    //如果then 的返回promise return 自己时报错
     return reject(new TypeError('Chaining cycle detected for promise #<Promise>'))
   }
 
   if(x instanceof MyPromise){
     // 根据 promise2 对象 的状态执行对应的回调
+    // 将then 的promise返回函数的成功失败回调，传给 上级成功回调返回的promise
     x.then(resolve, reject)
 
   }else{
@@ -112,7 +136,6 @@ function resolvePromise(promise2,x, resolve, reject){
 
 // *************************************************************
 let promise = new MyPromise((resolve, reject) => {
- 
   // reject(' promise 失败')
   setTimeout(() => {
     
@@ -124,6 +147,7 @@ let promise = new MyPromise((resolve, reject) => {
 
 function other(){
   return new MyPromise((resolve, reject)=>{
+    // 力扣精灵盛典
     setTimeout(() => {
       // resolve('other 成功')
       reject('other 失败')
@@ -135,9 +159,10 @@ function other(){
 
 let p2 = promise.then(value=>{
   console.log(value)
-  return p2
+  return other()
 },(value)=>{
-  console.log(value)
+  // console.log(value)
+  // console.log(value)
 })
 p2.then(
   (value)=>{console.log(value)} , 
