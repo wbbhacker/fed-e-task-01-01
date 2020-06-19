@@ -42,9 +42,8 @@ class MyPromise{
     this.status = REJECTED
     this.reason = v
 
-
     // 异步完成时，执行失败回调
-    if (this.failCallBacks.length > 0) this.failCallBacks.forEach(cb=>(this.reason))
+    if (this.failCallBacks.length > 0) this.failCallBacks.forEach(cb=> cb(this.reason))
     
   }
   then(successCallback, failCallBack){
@@ -55,29 +54,39 @@ class MyPromise{
         switch (this.status) {
           case FULFILLED:
             // 成功回调
-                let x = successCallback(this.value)
-                resolvePromise( x, resolve, reject)
+                setTimeout(() => {                  
+                  let x = successCallback(this.value)
+                  resolvePromise(promise2, x, resolve, reject)
+                }, 0);
+                
             break;
           
           case REJECTED:
             // 失败回调
-              let r = failCallBack(this.reason)
-              resolvePromise( r, resolve, reject)
+                setTimeout(() => {                  
+                  let r = failCallBack(this.reason)
+                  resolvePromise(promise2, r, resolve, reject)
+                }, 0);
+
             break;
 
           default:
             // 异步时,保存回调fn
 
             this.successCallbacks.push((value)=>{
-              let x = successCallback(value)
-              resolvePromise(x, resolve, reject)
+              setTimeout(() => {                
+                let x = successCallback(value)
+                resolvePromise(promise2,x, resolve, reject)
+              }, 0);
             })
+
             this.failCallBacks.push((value)=>{
-              let x = failCallBack(value)
-              resolvePromise(x, resolve, reject)
+              setTimeout(() => {                
+                let x = failCallBack(value)
+                resolvePromise(promise2,x, resolve, reject)
+              }, 0);
             })
              
-            
             break;
         }
     })
@@ -85,7 +94,10 @@ class MyPromise{
   }
 }
 
-function resolvePromise( x, resolve, reject){
+function resolvePromise(promise2,x, resolve, reject){
+  if(promise2 ===x ){
+    return reject(new TypeError('Chaining cycle detected for promise #<Promise>'))
+  }
 
   if(x instanceof MyPromise){
     // 根据 promise2 对象 的状态执行对应的回调
@@ -112,25 +124,23 @@ let promise = new MyPromise((resolve, reject) => {
 
 function other(){
   return new MyPromise((resolve, reject)=>{
-    // setTimeout(() => {
-      resolve('other 成功')
-      // reject('other 失败')
-    // }, 1000);
+    setTimeout(() => {
+      // resolve('other 成功')
+      reject('other 失败')
+    }, 1000);
   })
 }
 
 
 
-promise.then(value=>{
+let p2 = promise.then(value=>{
   console.log(value)
-  return other()
+  return p2
 },(value)=>{
   console.log(value)
-}).then(
-  (value)=>{
-    console.log(value)
-    return 0
-  } , 
+})
+p2.then(
+  (value)=>{console.log(value)} , 
   (value)=> console.log(value), 
 )
 
